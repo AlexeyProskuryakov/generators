@@ -22,11 +22,13 @@ MIN_WORDS_IN_TITLE = 3
 
 class SubredditsRelationsStore(DBHandler):
     def __init__(self, name="?"):
-        super(SubredditsRelationsStore, self).__init__(name=name)
-        self.sub_col = self.db.get_collection("sub_relations")
-        if not self.sub_col:
+        super(SubredditsRelationsStore, self).__init__(name="sub relations %s" % name)
+        collections = self.db.collection_names(include_system_collections=False)
+        if "sub_relations" not in collections:
             self.sub_col = self.db.create_collection("sub_relations")
             self.sub_col.create_index([("name", 1)], unique=True)
+        else:
+            self.sub_col = self.db.get_collection("sub_relations")
 
     def add_sub_relations(self, sub_name, related_subs):
         result = self.sub_col.update_one({"name": sub_name}, {"$set": {"related": related_subs}}, upsert=True)
