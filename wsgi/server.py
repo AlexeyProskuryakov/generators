@@ -17,7 +17,7 @@ from wsgi.rr_people.posting.balancer import BatchStorage, post_queue, post_stora
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
 from wsgi.rr_people.posting.posts import PS_BAD, PS_READY
 from wsgi.rr_people.posting.posts_generator import PostsGenerator
-from wsgi.rr_people.posting.posts_managing import PostHandler, NoisePostsAutoAdder
+from wsgi.rr_people.posting.posts_managing import PostHandler, NoisePostsAutoAdder, ImportantYoutubePostSupplier
 from wsgi.rr_people.states.processes import ProcessDirector
 from wsgi.wake_up import WakeUp
 
@@ -255,6 +255,9 @@ def noise_auto_add():
 
     return jsonify(**{"ok": True, "started": False})
 
+
+imposu = ImportantYoutubePostSupplier()
+imposu.start()
 
 # generators
 splitter = re.compile('[^\w\d_-]*')
