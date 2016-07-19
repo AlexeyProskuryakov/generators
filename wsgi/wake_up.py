@@ -31,6 +31,10 @@ class WakeUpStorage(DBHandler):
             log.info("add new url [%s]" % url)
             self.urls.insert_one({"url_hash": hash_url, "url": url})
 
+    def remove_url(self, url):
+        log.info("remove url [%s]" % url)
+        self.urls.delete_one({"url": url})
+
 
 class WakeUp(Process):
     def __init__(self):
@@ -49,7 +53,7 @@ class WakeUp(Process):
                     result = requests.post(addr)
                     if result.status_code != 200:
                         time.sleep(1)
-                        log.info("send: [%s][%s] not work will trying next times..." % (addr,result.status_code))
+                        log.info("send: [%s][%s] not work will trying next times..." % (addr, result.status_code))
                         continue
                     else:
                         log.info("send: [%s] OK" % addr)

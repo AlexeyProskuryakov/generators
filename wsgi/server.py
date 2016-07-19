@@ -71,10 +71,16 @@ def wake_up_manage():
     if request.method == "POST":
         urls = request.form.get("urls")
         urls = urls.split("\n")
-        for url in urls:
+        for i, url in enumerate(urls):
             url = url.strip()
             if url:
                 wu.store.add_url(url)
+                urls[i] = url
+
+        saved_urls = wu.store.get_urls()
+        to_delete = set(saved_urls).difference(urls)
+        for url in to_delete:
+            wu.store.remove_url(url)
 
     urls = wu.store.get_urls()
     return render_template("wake_up.html", **{"urls": urls})
@@ -355,6 +361,7 @@ def del_sub():
 
     return jsonify(**{"ok": False, "error": "sub is not exists"})
 
+
 @app.route("/generators/prepare_for_posting", methods=["POST"])
 @login_required
 def prepare_for_posting():
@@ -367,6 +374,7 @@ def prepare_for_posting():
         return jsonify(**{"ok": True})
 
     return jsonify(**{"ok": False, "error": "sub is not exists"})
+
 
 @app.route("/queue/posts/<name>", methods=["GET"])
 @login_required
