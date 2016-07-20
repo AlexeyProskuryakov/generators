@@ -59,6 +59,10 @@ class PostBatch():
         self.cache_id = cache_id
 
     @property
+    def hashes(self):
+        return self.data
+
+    @property
     def to_data(self):
         return {"channels": list(self.channels),
                 "human_name": self.human_name,
@@ -69,11 +73,9 @@ class PostBatch():
     def size(self):
         return len(self.data)
 
-    def have_not(self, url_hash, channel_id):
-        if url_hash not in self.data:
-            if not channel_id: return True  # if channel id is None or empty value
-            return channel_id not in self.channels  # or if channel id not in already added
-        return False
+    def have_not(self, channel_id):
+        if not channel_id: return True  # if channel id is None or empty value
+        return channel_id not in self.channels  # or if channel id not in already added
 
     def add(self, url_hash, channel_id, to_start=False):
         self.channels.add(channel_id)
@@ -131,7 +133,6 @@ class _PostBalancerEngine(Process):
 
         return result
 
-
     def _get_human_name(self, sub):
         sub_humans = self._load_human_sub_mapping()
         if sub in sub_humans:
@@ -160,7 +161,10 @@ class _PostBalancerEngine(Process):
                                                   "human_name": _human_name})
 
         for batch in self.batch_storage.get_human_post_batches(_human_name):
-            if batch.have_not(url_hash, channel_id):
+            if url_hash in batch.hashes:
+                log.info("want to add duplicate url hash: %s"%url_hash)
+                return
+            if batch.have_not(channel_id):
                 batch.add(url_hash, channel_id, important)
                 log.info("added to batch post %s %s of %s" % (url_hash, channel_id, _human_name))
                 if batch.size >= MAX_BATCH_SIZE:
