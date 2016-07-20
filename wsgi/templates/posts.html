@@ -21,8 +21,9 @@
                 {{human}}
             </a> <br>
             {% endfor %}
+            <hr>
         </div>
-        <div class="col-md-8">
+        <div class="col-md-7">
             <h3>Состояние поиска постов-хуестов: </h3>
             {% for s, st in subs.items() %}
 
@@ -61,7 +62,9 @@
                         <div class="accordion-heading">
                             <a class="accordion-toggle" data-toggle="collapse" data-parent="#info-accordion"
                                href="#{{s}}">
-                                <h3>Найденные посты: {{s}} <small> ({{qp_s[s] | length }}) </small> </h3>
+                                <h3>Найденные посты: {{s}}
+                                    <small> ({{qp_s[s] | length }})</small>
+                                </h3>
                             </a>
                         </div>
                         <div id="{{s}}" class="accordion-body collapse">
@@ -95,6 +98,31 @@
             <hr>
             <br>
             {% endfor %}
+        </div>
+        <div class="col-md-3">
+            <h3>Статистика-поебистика</h3>
+            <table class="table table-stripped table-condensed">
+                <thead>
+                <tr>
+                    <td><b>State</b></td>
+                    <td><b>Count</b></td>
+                </tr>
+                </thead>
+                <tbody>
+                {%for stat_el in stat%}
+                <tr>
+                    <td>
+                        {{stat_el['_id']}}
+                    </td>
+                    <td>
+                        {{stat_el['count']}}
+                    </td>
+                </tr>
+                {%endfor%}
+
+                </tbody>
+            </table>
+
         </div>
     </div>
 </div>

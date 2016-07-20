@@ -256,9 +256,6 @@ def noise_auto_add():
     return jsonify(**{"ok": True, "started": False})
 
 
-imposu = ImportantYoutubePostSupplier()
-imposu.start()
-
 # generators
 splitter = re.compile('[^\w\d_-]*')
 
@@ -267,6 +264,9 @@ posts_generator = PostsGenerator()
 posts_handler = PostHandler("server")
 process_director = ProcessDirector("server")
 batch_storage = BatchStorage("server")
+
+imposu = ImportantYoutubePostSupplier(ph=posts_handler, ms=db)
+imposu.start()
 
 
 @app.route("/posts")
@@ -280,7 +280,10 @@ def posts():
         subs_states[sub] = posts_generator.states_handler.get_posts_generator_state(sub) or S_STOP
 
     human_names = map(lambda x: x.get("user"), db.get_humans_info(projection={"user": True}))
-    return render_template("posts.html", **{"subs": subs_states, "qp_s": qp_s, "humans": human_names})
+
+    stat = post_storage.posts.aggregate([{"$group": {"_id": "$state", "count": {"$sum": 1}}}])
+
+    return render_template("posts.html", **{"subs": subs_states, "qp_s": qp_s, "humans": human_names, "stat": stat})
 
 
 @app.route("/generators", methods=["GET", "POST"])

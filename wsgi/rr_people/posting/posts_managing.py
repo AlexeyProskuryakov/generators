@@ -62,13 +62,12 @@ class ImportantYoutubePostSupplier(Process):
     Process which get humans config and retrieve channel_id, after retrieve new posts from it and
     """
 
-    def __init__(self, pq=None, ps=None, ms=None):
+    def __init__(self, ms=None, ph=None):
         super(ImportantYoutubePostSupplier, self).__init__()
-        self.queue = pq or PostRedisQueue("im po su")
-        self.posts_storage = ps or PostsStorage("im po su")
-        self.main_storage = ms or HumanStorage("im po su")
-        self.post_handler = PostHandler(self.queue, self.posts_storage)
-        self.posts_supplier = YoutubeChannelsHandler(self.posts_storage)
+
+        self.main_storage = ms or HumanStorage("im po su main")
+        self.post_handler = ph or PostHandler("im po su ph")
+        self.posts_supplier = YoutubeChannelsHandler(self.post_handler.posts_storage)
 
         self.pd = ProcessDirector("im po su")
 
