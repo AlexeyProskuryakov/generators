@@ -4,13 +4,19 @@ import time
 
 from wsgi.db import DBHandler
 
+PS_PREPARED = "prepared"
 PS_READY = "ready"
 PS_POSTED = "posted"
-PS_NO_POSTS = "no_posts"
-PS_BAD = "bad"
 PS_AT_QUEUE = "at_queue"
-PS_AT_BALANCER = "at_balancer"
+
+PS_BAD = "bad"
+
+PS_NO_POSTS = "no_posts"
 PS_ERROR = "error"
+
+
+def URL_HASH(url):
+    return str(hash(url))
 
 
 class PostSource(object):
@@ -35,7 +41,7 @@ class PostSource(object):
         self.title = title
         self.for_sub = for_sub
         self.at_time = at_time
-        self.url_hash = url_hash or str(hash(url))
+        self.url_hash = url_hash or URL_HASH(url)
         self.important = important
 
     def serialize(self):
@@ -67,59 +73,49 @@ class PostsStorage(DBHandler):
             self.posts = self.db.get_collection("generated_posts")
 
     # posts
-    def set_post_channel_id(self, url_hash, channel_id):
-        return self.posts.update_one({"url_hash": str(url_hash)}, {"$set": {"channel_id": channel_id}})
-
-    def update_post(self, url_hash, new_data):
-        return self.posts.update_one({"url_hash": str(url_hash)}, {"$set": new_data})
-
     def set_post_state(self, url_hash, state):
-        return self.posts.update_one({"url_hash": str(url_hash)}, {"$set": {"state": state}})
+        return self.posts.update_one({"url_hash": url_hash}, {"$set": {"state": state}})
 
     def get_post_state(self, url_hash):
-        found = self.posts.find_one({"url_hash": str(url_hash)}, projection={"state": 1})
+        found = self.posts.find_one({"url_hash": url_hash}, projection={"state": 1})
         if found:
             return found.get("state")
 
-    def get_good_post(self, url_hash, projection=None):
-        _projection = projection or {"_id": False}
-        found = self.posts.find_one({"url_hash": str(url_hash), 'state': {'$ne': PS_BAD}}, projection=_projection)
-        if found:
-            return PostSource.from_dict(found), found.get('sub')
+    def get_posts_with_state(self, state, projection=None, sort=None):
+        q = {"state": state}
+        proj = projection or {"_id": False}
+        cur = self.posts.find(q, projection=proj)
+        if sort:
+            cur.sort(sort)
+        return list(cur)
 
     def get_post(self, url_hash, projection=None):
         _projection = projection or {"_id": False}
-        found = self.posts.find_one({"url_hash": str(url_hash)}, projection=_projection)
+        found = self.posts.find_one({"url_hash": url_hash}, projection=_projection)
         if found:
             return PostSource.from_dict(found), found
         return None, None
 
-    def get_posts(self, url_hashes):
-        result = self.posts.find({"url_hash": {"$in": url_hashes}})
-        return list(result)
-
-    def get_old_ready_posts(self, tdiff):
-        for post_data in self.posts.find({"time": {"$lte": time.time() - tdiff}, "state": PS_READY},
-                                         projection={"_id": False}):
-            yield PostSource.from_dict(post_data)
-
-    def add_generated_post(self, post, sub, important=False, channel_id=None):
+    def add_generated_post(self, post, sub, important=False, human=None, state=PS_PREPARED):
         if isinstance(post, PostSource):
             found, _ = self.get_post(post.url_hash, projection={"_id": True})
             if not found:
                 data = post.to_dict()
-                data['state'] = PS_READY
+                data['state'] = state
                 data['sub'] = sub
                 data['time'] = time.time()
 
                 if important:
                     data['important'] = important
-                if channel_id:
-                    data["channel_id"] = channel_id
+                if human:
+                    data["human"] = human
                 return self.posts.insert_one(data)
 
-    def get_posts_for_sub(self, sub, state=PS_READY):
+    def get_posts_for_sub_with_state(self, sub, state=PS_PREPARED):
         return map(lambda x: PostSource.from_dict(x), self.posts.find({"sub": sub, "state": state}))
+
+    def move_posts_to_ready_state(self, sub):
+        self.posts.update_many({"sub": sub, "state": PS_PREPARED}, {"$set": {"state": PS_READY}})
 
     def remove_posts_of_sub(self, subname):
         result = self.posts.delete_many({"sub": subname})

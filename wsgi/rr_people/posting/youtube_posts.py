@@ -5,7 +5,7 @@ from apiclient.discovery import build
 from apiclient.errors import HttpError
 
 from wsgi.properties import YOUTUBE_DEVELOPER_KEY, YOUTUBE_API_VERSION, YOUTUBE_API_SERVICE_NAME
-from wsgi.rr_people.posting.posts import PostsStorage, PostSource
+from wsgi.rr_people.posting.posts import PostsStorage, PostSource, URL_HASH
 
 log = logging.getLogger("youtube")
 
@@ -46,7 +46,7 @@ class YoutubeChannelsHandler(object):
     def _get_new_videos_ids(self, video_ids):
         result = []
         for v_id in video_ids:
-            if self.posts_storage.get_post_state(str(hash(YOUTUBE_URL(v_id)))):
+            if self.posts_storage.get_post_state(URL_HASH(YOUTUBE_URL(v_id))):
                 continue
             result.append(v_id)
         return result

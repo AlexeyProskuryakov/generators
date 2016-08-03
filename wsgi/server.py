@@ -13,11 +13,10 @@ from werkzeug.utils import redirect
 from wsgi.db import HumanStorage
 from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
-from wsgi.rr_people.posting.balancer import BatchStorage, post_queue, post_storage
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
-from wsgi.rr_people.posting.posts import PS_BAD, PS_READY
+from wsgi.rr_people.posting.posts import PS_BAD, PS_READY, PostsStorage
 from wsgi.rr_people.posting.posts_generator import PostsGenerator
-from wsgi.rr_people.posting.posts_managing import PostHandler, NoisePostsAutoAdder, ImportantYoutubePostSupplier
+from wsgi.rr_people.posting.posts_managing import ImportantYoutubePostSupplier, NoisePostsAutoAdder
 from wsgi.rr_people.states.processes import ProcessDirector
 from wsgi.wake_up import WakeUp
 
@@ -261,11 +260,9 @@ splitter = re.compile('[^\w\d_-]*')
 
 srs = SubredditsRelationsStore("server")
 posts_generator = PostsGenerator()
-posts_handler = PostHandler("server")
 process_director = ProcessDirector("server")
-batch_storage = BatchStorage("server")
-
-imposu = ImportantYoutubePostSupplier(ph=posts_handler, ms=db)
+posts_storage = PostsStorage("server")
+imposu = ImportantYoutubePostSupplier(ms=db, ps=posts_storage)
 imposu.start()
 
 
@@ -276,12 +273,12 @@ def posts():
     qp_s = {}
     subs_states = {}
     for sub in subs:
-        qp_s[sub] = posts_generator.posts_storage.get_posts_for_sub(sub, state=PS_READY)
+        qp_s[sub] = posts_storage.get_posts_for_sub_with_state(sub)
         subs_states[sub] = posts_generator.states_handler.get_posts_generator_state(sub) or S_STOP
 
     human_names = map(lambda x: x.get("user"), db.get_humans_info(projection={"user": True}))
 
-    stat = post_storage.posts.aggregate([{"$group": {"_id": "$state", "count": {"$sum": 1}}}])
+    stat = posts_storage.posts.aggregate([{"$group": {"_id": "$state", "count": {"$sum": 1}}}])
 
     return render_template("posts.html", **{"subs": subs_states, "qp_s": qp_s, "humans": human_names, "stat": stat})
 
@@ -348,7 +345,7 @@ def del_post():
     data = json.loads(request.data)
     p_hash = data.get("url_hash")
     if p_hash:
-        posts_generator.posts_storage.set_post_state(int(p_hash), PS_BAD)
+        posts_storage.set_post_state(p_hash, PS_BAD)
         return jsonify(**{"ok": True})
     return jsonify(**{"ok": False, "error": "post url hash is not exists"})
 
@@ -361,7 +358,7 @@ def del_sub():
     if sub_name:
         posts_generator.terminate_generate_posts(sub_name)
         db.remove_sub_for_humans(sub_name)
-        posts_generator.posts_storage.remove_posts_of_sub(sub_name)
+        posts_storage.remove_posts_of_sub(sub_name)
         posts_generator.states_handler.remove_post_generator(sub_name)
         return jsonify(**{"ok": True})
 
@@ -374,9 +371,7 @@ def prepare_for_posting():
     data = json.loads(request.data)
     sub = data.get("sub")
     if sub:
-        for post in posts_generator.posts_storage.get_posts_for_sub(sub):
-            posts_handler.move_noise_post_to_balancer(sub, post)
-
+        posts_storage.move_posts_to_ready_state(sub)
         return jsonify(**{"ok": True})
 
     return jsonify(**{"ok": False, "error": "sub is not exists"})
@@ -385,25 +380,8 @@ def prepare_for_posting():
 @app.route("/queue/posts/<name>", methods=["GET"])
 @login_required
 def queue_of_posts(name):
-    batches = []
-    for batch in batch_storage.batches.find({"human_name": name}).sort("count", -1):
-        if batch.get("url_hashes"):
-            posts = post_storage.get_posts(batch.get("url_hashes"))
-            if posts:
-                batch["posts"] = posts
-                batches.append(batch)
-
-    posts_hashes = post_queue.show_all_posts_hashes(name)
-    queue = []
-    if posts_hashes:
-        for post_hash in posts_hashes:
-            _, post_data = post_storage.get_post(post_hash)
-            queue.append(post_data)
-    else:
-        log.warning("no posts hashes at queue for %s :(" % name)
-        queue = []
-
-    return render_template("posts_queue.html", **{"human_name": name, "queue": queue, "batches": batches})
+    queue = posts_storage.get_posts_with_state(PS_READY)
+    return render_template("posts_queue.html", **{"human_name": name, "queue": queue})
 
 
 if __name__ == '__main__':

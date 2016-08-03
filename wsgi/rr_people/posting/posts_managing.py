@@ -1,58 +1,15 @@
 # coding=utf-8
 import logging
-import random
 import time
 from multiprocessing import Process
 
 from wsgi.db import HumanStorage
 from wsgi.properties import force_post_manager_sleep_iteration_time
-from wsgi.rr_people.posting.balancer import PostBalancer
-from wsgi.rr_people.posting.posts import PostsStorage, PostSource
-from wsgi.rr_people.posting.queue import PostRedisQueue
+from wsgi.rr_people.posting.posts import PostsStorage, PS_READY
 from wsgi.rr_people.posting.youtube_posts import YoutubeChannelsHandler
 from wsgi.rr_people.states.processes import ProcessDirector
 
 log = logging.getLogger("posts")
-
-
-class PostHandler(object):
-    def __init__(self, name="?", pq=None, ps=None):
-        self.queue = pq or PostRedisQueue("ph %s" % name)
-        self.posts_storage = ps or PostsStorage("ph %s" % name)
-        self.youtube = YoutubeChannelsHandler(self.posts_storage)
-        self.balancer = PostBalancer()
-
-    def add_important_post(self, human_name, post_source, sub, channel_id=None, important=False):
-        if isinstance(post_source, PostSource):
-            self.posts_storage.add_generated_post(post_source, sub, important=important, channel_id=channel_id)
-            self.balancer.add_post(post_source.url_hash, channel_id, important=important, human_name=human_name)
-        else:
-            raise Exception("post_source is not post source!")
-
-    def move_noise_post_to_balancer(self, sub, post_source):
-        if isinstance(post_source, PostSource):
-            channel_id = self.youtube.get_channel_id(post_source.url)
-            self.posts_storage.set_post_channel_id(post_source.url_hash, channel_id)
-            self.balancer.add_post(post_source.url_hash, channel_id, sub=sub)
-        else:
-            raise Exception("post_source is not post source!")
-
-    def get_prepared_post(self, human_name):
-        url_hash = self.queue.pop_post(human_name)
-        if not url_hash:
-            log.warn("Not any posts for [%s] at queue" % human_name)
-            return
-        post_data = self.posts_storage.get_good_post(url_hash)
-        if not post_data:
-            log.warn("Not any good posts for [%s] at storage" % human_name)
-            return
-        post, sub = post_data
-        if not post.for_sub: post.for_sub = sub
-        return post
-
-    def set_post_state(self, url_hash, new_state):
-        self.posts_storage.set_post_state(url_hash, new_state)
-
 
 IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT = "im_po_su_aspect"
 
@@ -62,12 +19,12 @@ class ImportantYoutubePostSupplier(Process):
     Process which get humans config and retrieve channel_id, after retrieve new posts from it and
     """
 
-    def __init__(self, ms=None, ph=None):
+    def __init__(self, ms=None, ps=None):
         super(ImportantYoutubePostSupplier, self).__init__()
 
         self.main_storage = ms or HumanStorage("im po su main")
-        self.post_handler = ph or PostHandler("im po su ph")
-        self.posts_supplier = YoutubeChannelsHandler(self.post_handler.posts_storage)
+        self.post_storage = ps or PostsStorage("im po su ph")
+        self.posts_supplier = YoutubeChannelsHandler(self.post_storage)
 
         self.pd = ProcessDirector("im po su")
 
@@ -81,7 +38,8 @@ class ImportantYoutubePostSupplier(Process):
                 human_name, len(new_posts), ' youtube \n'.join([str(post) for post in new_posts])))
 
             for post in new_posts:
-                self.post_handler.add_important_post(human_name, post, post.for_sub, channel_id, important=True)
+                self.post_storage.add_generated_post(post, post.for_sub, human=human_name, important=True,
+                                                     state=PS_READY)
 
             return len(new_posts), None
 
@@ -121,7 +79,6 @@ class NoisePostsAutoAdder(Process):
         super(NoisePostsAutoAdder, self).__init__()
         self.process_director = ProcessDirector("noise pp")
         self.posts_storage = PostsStorage("noise pp")
-        self.post_handler = PostHandler("noise pp", ps=self.posts_storage)
         self.main_db = HumanStorage("noise pp")
 
     def run(self):
@@ -141,8 +98,8 @@ class NoisePostsAutoAdder(Process):
                 after = 3600
 
             counter = 0
-            for post in self.posts_storage.get_old_ready_posts(after):
-                self.post_handler.move_noise_post_to_balancer(post, post.for_sub)
+            for post in self.posts_storage.posts.find({"time": {"$lt": time.time() - after}}):
+                self.posts_storage.set_post_state(post.get("url_hash"), PS_READY)
                 counter += 1
 
             log.info("Auto add to balancer will add %s posts" % counter)

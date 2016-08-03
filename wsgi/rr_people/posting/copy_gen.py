@@ -9,7 +9,7 @@ from requests import get
 from wsgi.db import DBHandler
 from wsgi.rr_people import RedditHandler, cmp_by_created_utc, normalize, tokens_equals, DEFAULT_USER_AGENT
 from wsgi.rr_people.posting.generator import Generator
-from wsgi.rr_people.posting.posts import PostSource, PostsStorage
+from wsgi.rr_people.posting.posts import PostSource, PostsStorage, URL_HASH
 
 COPY = "copy"
 
@@ -131,8 +131,8 @@ class CopyPostGenerator(RedditHandler, Generator):
         related_subs = self.sub_store.get_related_subs(subreddit)
         hot_and_new = self.get_hot_and_new(subreddit, sort=cmp_by_created_utc)
         for post in hot_and_new:
-            url_hash = hash(post.url)
-            if self.post_storage.get_post_state(url_hash):
+            url_hash = URL_HASH(post.url)
+            if self.post_storage.get_post(url_hash, projection={"_id": True}):
                 continue
             if post.ups > MIN_RATING and post.ups < MAX_RATING:
                 title = self.get_title(prepare_url(post.url))
