@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 __pycache__/
-*.py[cod]
+*.pyc
+*.py[od]
 *$py.class
 *.so
 .Python

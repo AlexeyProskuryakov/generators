@@ -81,12 +81,9 @@ class PostsStorage(DBHandler):
         if found:
             return found.get("state")
 
-    def get_posts_with_state(self, state, projection=None, sort=None):
-        q = {"state": state}
-        proj = projection or {"_id": False}
-        cur = self.posts.find(q, projection=proj)
-        if sort:
-            cur.sort(sort)
+    def get_ready_posts(self, name):
+        q = {"human": name, "state": PS_READY}
+        cur = self.posts.find(q).sort([("time", -1)])
         return list(cur)
 
     def get_post(self, url_hash, projection=None):

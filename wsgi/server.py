@@ -14,7 +14,7 @@ from wsgi.db import HumanStorage
 from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
-from wsgi.rr_people.posting.posts import PS_BAD, PS_READY, PostsStorage
+from wsgi.rr_people.posting.posts import PS_BAD, PS_READY, PostsStorage, PS_PREPARED
 from wsgi.rr_people.posting.posts_generator import PostsGenerator
 from wsgi.rr_people.posting.posts_managing import ImportantYoutubePostSupplier, NoisePostsAutoAdder
 from wsgi.rr_people.states.processes import ProcessDirector
@@ -273,7 +273,7 @@ def posts():
     qp_s = {}
     subs_states = {}
     for sub in subs:
-        qp_s[sub] = posts_storage.get_posts_for_sub_with_state(sub)
+        qp_s[sub] = posts_storage.get_posts_for_sub_with_state(sub, state=PS_PREPARED)
         subs_states[sub] = posts_generator.states_handler.get_posts_generator_state(sub) or S_STOP
 
     human_names = map(lambda x: x.get("user"), db.get_humans_info(projection={"user": True}))
@@ -380,7 +380,7 @@ def prepare_for_posting():
 @app.route("/queue/posts/<name>", methods=["GET"])
 @login_required
 def queue_of_posts(name):
-    queue = posts_storage.get_posts_with_state(PS_READY)
+    queue = posts_storage.get_ready_posts(name=name)
     return render_template("posts_queue.html", **{"human_name": name, "queue": queue})
 
 
