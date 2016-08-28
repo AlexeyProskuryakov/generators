@@ -52,6 +52,12 @@
                         <td>
                             {{post['time'] | tst_to_dt}}
                         </td>
+                        <td>
+                             <button class="btn btn-danger"
+                                                    onclick="delete_post('{{post.url_hash}}');">
+                                                Нахуй
+                                            </button>
+                        </td>
 
                     </tr>
                     {% endfor %}
@@ -66,5 +72,6 @@
     </div>
 
 </div>
+<script src="{{ url_for('static', filename='js/generators.js') }}"></script>
 {% endblock %}
 {% endblock %}

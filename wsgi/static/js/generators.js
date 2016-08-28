@@ -50,12 +50,11 @@ function prepare_for_posting(name){
         });
 };
 
-function delete_post(sub, url_hash){
-    console.log(sub,url_hash);
+function delete_post(url_hash){
     $.ajax({
             type:"post",
             url:"/generators/del_post",
-            data:JSON.stringify({"sub":sub,"url_hash":url_hash}),
+            data:JSON.stringify({"url_hash":url_hash}),
             contentType:    'application/json',
             dataType:       'json',
             success:function(data){

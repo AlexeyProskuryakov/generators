@@ -67,6 +67,7 @@ class PostsStorage(DBHandler):
             self.posts = self.db.create_collection("generated_posts")
             self.posts.create_index("url_hash", unique=True)
             self.posts.create_index("human", sparse=True)
+            self.posts.create_index("sub")
             self.posts.create_index("important")
             self.posts.create_index("state")
             self.posts.create_index("time")
