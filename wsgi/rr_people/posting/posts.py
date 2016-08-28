@@ -86,17 +86,21 @@ class PostsStorage(DBHandler):
         cur = self.posts.find(q).sort([("time", -1)])
         return list(cur)
 
-    def get_post(self, url_hash, projection=None):
+    def get_post_and_info(self, url_hash, projection=None):
         _projection = projection or {"_id": False}
         found = self.posts.find_one({"url_hash": url_hash}, projection=_projection)
         if found:
             return PostSource.from_dict(found), found
         return None, None
 
+    def check_post_hash_exists(self, url_hash):
+        found = self.posts.find_one({"url_hash": url_hash}, projection={"id": 1})
+        if found: return True
+        return False
+
     def add_generated_post(self, post, sub, important=False, human=None, state=PS_PREPARED):
         if isinstance(post, PostSource):
-            found, _ = self.get_post(post.url_hash, projection={"_id": True})
-            if not found:
+            if not self.check_post_hash_exists(post.url_hash):
                 data = post.to_dict()
                 data['state'] = state
                 data['sub'] = sub

@@ -2,6 +2,7 @@ import logging
 import random
 import re
 
+import time
 from bs4 import BeautifulSoup
 from praw.objects import MoreComments
 from requests import get
@@ -19,6 +20,7 @@ MIN_RATING = 2
 MAX_RATING = 50
 MIN_WORDS_IN_TITLE = 3
 
+MIN_COMMENT_CANDIDATE_DELAY = 3600 * 7
 
 class SubredditsRelationsStore(DBHandler):
     def __init__(self, name="?"):
@@ -119,10 +121,13 @@ class CopyPostGenerator(RedditHandler, Generator):
             pass
 
     def get_title_from_comments(self, post, title):
-        title_tokens = normalize(title, lambda x: x)
+        if post.created_utc - time.time() < MIN_COMMENT_CANDIDATE_DELAY:return
+        if post.num_comments < 10:return
+        if post.num_reports:return
 
+        title_tokens = normalize(title, lambda x: x)
         for comment in self.comments_sequence(post.comments):
-            if not isinstance(comment, MoreComments) and comment.created_utc + 3600 * 7 < post.created_utc:
+            if not isinstance(comment, MoreComments) and comment.created_utc + MIN_COMMENT_CANDIDATE_DELAY < post.created_utc:
                 comment_tokens = normalize(comment.body, lambda x: x)
                 if tokens_equals(title_tokens, comment_tokens):
                     return comment.body
@@ -132,7 +137,7 @@ class CopyPostGenerator(RedditHandler, Generator):
         hot_and_new = self.get_hot_and_new(subreddit, sort=cmp_by_created_utc)
         for post in hot_and_new:
             url_hash = URL_HASH(post.url)
-            if self.post_storage.get_post(url_hash, projection={"_id": True}):
+            if self.post_storage.check_post_hash_exists(url_hash):
                 continue
             if post.ups > MIN_RATING and post.ups < MAX_RATING:
                 title = self.get_title(prepare_url(post.url))
