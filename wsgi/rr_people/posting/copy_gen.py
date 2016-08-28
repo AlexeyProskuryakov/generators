@@ -22,6 +22,7 @@ MIN_WORDS_IN_TITLE = 3
 
 MIN_COMMENT_CANDIDATE_DELAY = 3600 * 7
 
+
 class SubredditsRelationsStore(DBHandler):
     def __init__(self, name="?"):
         super(SubredditsRelationsStore, self).__init__(name="sub relations %s" % name)
@@ -121,13 +122,14 @@ class CopyPostGenerator(RedditHandler, Generator):
             pass
 
     def get_title_from_comments(self, post, title):
-        if post.created_utc - time.time() < MIN_COMMENT_CANDIDATE_DELAY:return
-        if post.num_comments < 10:return
-        if post.num_reports:return
+        if post.created_utc - time.time() < MIN_COMMENT_CANDIDATE_DELAY: return
+        if post.num_comments < 10: return
+        if post.num_reports: return
 
         title_tokens = normalize(title, lambda x: x)
         for comment in self.comments_sequence(post.comments):
-            if not isinstance(comment, MoreComments) and comment.created_utc + MIN_COMMENT_CANDIDATE_DELAY < post.created_utc:
+            if not isinstance(comment,
+                              MoreComments) and comment.created_utc + MIN_COMMENT_CANDIDATE_DELAY < post.created_utc:
                 comment_tokens = normalize(comment.body, lambda x: x)
                 if tokens_equals(title_tokens, comment_tokens):
                     return comment.body
@@ -150,5 +152,5 @@ class CopyPostGenerator(RedditHandler, Generator):
                         continue
                 if title and is_valid_title(title):
                     post = PostSource(post.url, title.strip(), for_sub=random.choice(related_subs))
-                    if self.post_storage.add_generated_post(post, subreddit):
+                    if self.post_storage.add_generated_post(post, subreddit, important=False):
                         yield post

@@ -66,9 +66,11 @@ class PostsStorage(DBHandler):
         if "generated_posts" not in collection_names:
             self.posts = self.db.create_collection("generated_posts")
             self.posts.create_index("url_hash", unique=True)
-            self.posts.create_index("sub")
+            self.posts.create_index("human", sparse=True)
+            self.posts.create_index("important")
             self.posts.create_index("state")
             self.posts.create_index("time")
+            self.posts.create_index("_lock", sparse=True)
         else:
             self.posts = self.db.get_collection("generated_posts")
 
