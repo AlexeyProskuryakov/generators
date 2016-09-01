@@ -19,10 +19,10 @@ class ImportantYoutubePostSupplier(Process):
     Process which get humans config and retrieve channel_id, after retrieve new posts from it and
     """
 
-    def __init__(self, ms=None, ps=None):
+    def __init__(self, hs=None, ps=None):
         super(ImportantYoutubePostSupplier, self).__init__()
 
-        self.main_storage = ms or HumanStorage("im po su main")
+        self.human_storage = hs or HumanStorage("im po su main")
         self.post_storage = ps or PostsStorage("im po su ph")
         self.posts_supplier = YoutubeChannelsHandler(self.post_storage)
 
@@ -54,7 +54,7 @@ class ImportantYoutubePostSupplier(Process):
             return
 
         while 1:
-            humans_data = self.main_storage.get_humans_info(projection={"user": True, "subs": True, "channel_id": True})
+            humans_data = self.human_storage.get_humans_info(projection={"user": True, "subs": True, "channel_id": True})
             for human_data in humans_data:
                 channel_id = human_data.get("channel_id")
                 if channel_id:

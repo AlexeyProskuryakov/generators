@@ -27,9 +27,10 @@
                 <table class="table table-stripped table-hover table-condensed">
                     <thead>
                     <tr>
+                        <td>important?</td>
                         <td>url</td>
                         <td>for sub</td>
-                        <td>important</td>
+                        <td>to sub</td>
                         <td>channel id</td>
                         <td>when found</td>
                     </tr>
@@ -38,13 +39,16 @@
                     {% for post in queue %}
                     <tr id="{{post['url_hash']}}">
                         <td>
+                            post.get('important', False)
+                        </td>
+                        <td>
                             <a href="{{post['url']}}" target="_blank">{{post['title']}}</a>
                         </td>
                         <td>
-                            {{post['for_sub']}}
+                            {{post['sub']}}
                         </td>
                         <td>
-                            {{post['important']}}
+                            {{post['for_sub']}}
                         </td>
                         <td>
                             {{post['channel_id']}}

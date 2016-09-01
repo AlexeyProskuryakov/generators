@@ -1,8 +1,9 @@
 import json
+import random
 
 import time
 
-from wsgi.db import DBHandler
+from wsgi.db import DBHandler, HumanStorage
 
 PS_PREPARED = "prepared"
 PS_READY = "ready"
@@ -60,7 +61,7 @@ class PostSource(object):
 
 
 class PostsStorage(DBHandler):
-    def __init__(self, name="?"):
+    def __init__(self, name="?", hs=None):
         super(PostsStorage, self).__init__(name=name)
         collection_names = self.db.collection_names(include_system_collections=False)
         if "generated_posts" not in collection_names:
@@ -75,6 +76,7 @@ class PostsStorage(DBHandler):
         else:
             self.posts = self.db.get_collection("generated_posts")
 
+        self.hs = hs or HumanStorage()
     # posts
     def set_post_state(self, url_hash, state):
         return self.posts.update_one({"url_hash": url_hash}, {"$set": {"state": state}})
@@ -107,12 +109,9 @@ class PostsStorage(DBHandler):
                 data = post.to_dict()
                 data['state'] = state
                 data['sub'] = sub
+                data['important'] = important
+                data['human'] = human or random.choice(self.hs.get_humans_of_sub(sub))
                 data['time'] = time.time()
-
-                if important:
-                    data['important'] = important
-                if human:
-                    data["human"] = human
                 return self.posts.insert_one(data)
 
     def get_posts_for_sub_with_state(self, sub, state=PS_PREPARED):

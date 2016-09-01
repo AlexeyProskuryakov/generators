@@ -55,6 +55,7 @@ class HumanStorage(DBHandler):
         try:
             self.human_config = db.create_collection("human_config")
             self.human_config.create_index([("user", 1)], unique=True)
+            self.human_config.create_index([("subs", 1)])
         except CollectionInvalid as e:
             self.human_config = db.get_collection("human_config")
 
@@ -116,13 +117,19 @@ class HumanStorage(DBHandler):
     def set_human_subs(self, name, subreddits):
         self.human_config.update_one({"user": name}, {"$set": {"subs": subreddits}})
 
-    def get_human_subs(self, name):
+    def get_humans_of_sub(self, sub):
+        humans = []
+        for el in self.human_config.find({"subs":sub}, projection={"user":1}):
+            humans.append(el.get("user"))
+        return humans
+
+    def get_subs_of_human(self, name):
         found = self.human_config.find_one({"user": name}, projection={"subs": True})
         if found:
             return found.get("subs", [])
         return []
 
-    def get_all_humans_subs(self):
+    def get_subs_of_all_humans(self):
         cfg = self.human_config.find({}, projection={"subs": True})
         subs = []
         for el in cfg:
@@ -216,4 +223,4 @@ class HumanStorage(DBHandler):
 
 if __name__ == '__main__':
     hs = HumanStorage()
-    hs.save_log_human_row("Shlak2k15", "test", {"info": "test"})
+    print hs.get_humans_of_sub("funny")

@@ -261,15 +261,15 @@ splitter = re.compile('[^\w\d_-]*')
 srs = SubredditsRelationsStore("server")
 posts_generator = PostsGenerator()
 process_director = ProcessDirector("server")
-posts_storage = PostsStorage("server")
-imposu = ImportantYoutubePostSupplier(ms=db, ps=posts_storage)
+posts_storage = PostsStorage("server", hs=db)
+imposu = ImportantYoutubePostSupplier(hs=db, ps=posts_storage)
 imposu.start()
 
 
 @app.route("/posts")
 @login_required
 def posts():
-    subs = db.get_all_humans_subs()
+    subs = db.get_subs_of_all_humans()
     qp_s = {}
     subs_states = {}
     for sub in subs:
@@ -300,7 +300,7 @@ def gens_manage():
 
         flash(u"Генераторъ постановленъ!")
     gens = POST_GENERATOR_OBJECTS.keys()
-    subs = db.get_all_humans_subs()
+    subs = db.get_subs_of_all_humans()
     return render_template("generators.html", **{"subs": subs, "gens": gens})
 
 
