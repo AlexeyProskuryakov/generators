@@ -39,7 +39,7 @@
                     {% for post in queue %}
                     <tr id="{{post['url_hash']}}">
                         <td>
-                            post.get('important', False)
+                            {{post['important']}}
                         </td>
                         <td>
                             <a href="{{post['url']}}" target="_blank">{{post['title']}}</a>

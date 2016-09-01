@@ -76,7 +76,7 @@ class PostsStorage(DBHandler):
         else:
             self.posts = self.db.get_collection("generated_posts")
 
-        self.hs = hs or HumanStorage()
+        self.hs = hs or HumanStorage("ps %s"%name)
     # posts
     def set_post_state(self, url_hash, state):
         return self.posts.update_one({"url_hash": url_hash}, {"$set": {"state": state}})
