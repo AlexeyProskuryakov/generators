@@ -4,7 +4,7 @@ import time
 from multiprocessing import Process
 
 from wsgi.db import DBHandler
-from wsgi.rr_people import S_WORK, S_SUSPEND
+from wsgi.rr_people import S_WORK, S_SUSPEND, S_END
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.posts import PostsStorage
 from wsgi.rr_people.states.entity_states import StatesHandler
@@ -107,7 +107,7 @@ class PostsGenerator(object):
                 log.error("Was error at generating for sub: %s" % subrreddit)
                 log.exception(e)
             finally:
-                set_state(S_SUSPEND)
+                set_state(S_END)
 
         ps = Process(name="[%s] posts generator" % subrreddit, target=f)
         ps.start()

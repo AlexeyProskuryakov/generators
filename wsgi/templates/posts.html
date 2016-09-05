@@ -11,17 +11,32 @@
         {% endif %}
 
         <div class="col-md-2">
-            <h3>Настройки
-                <small><a href="{{url_for('gens_manage')}}">здеся</a></small>
-            </h3>
-            <hr>
-            <h3>Очереди чуваков:</h3>
-            {% for human in humans %}
-            <a href="{{url_for('queue_of_posts', name=human)}}">
-                {{human}}
-            </a> <br>
-            {% endfor %}
-            <hr>
+            <div class="row">
+                <div class="col-md-10">
+                    <br>
+                    <br>
+                    <button class="btn btn-success btn-lg" onclick="start_all()">Запустить все!</button>
+                    <div id="start-all-result">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-10">
+                <br>
+                <hr>
+                <h3>Настройки
+                    <small><a href="{{url_for('gens_manage')}}">здеся</a></small>
+                </h3>
+                <hr>
+                <h3>Очереди чуваков:</h3>
+                {% for human in humans %}
+                <a href="{{url_for('queue_of_posts', name=human)}}">
+                    {{human}}
+                </a> <br>
+                {% endfor %}
+                <hr>
+                    </div>
+            </div>
         </div>
         <div class="col-md-7">
             <h3>Состояние поиска постов-хуестов: </h3>
@@ -119,7 +134,6 @@
                     </td>
                 </tr>
                 {%endfor%}
-
                 </tbody>
             </table>
 

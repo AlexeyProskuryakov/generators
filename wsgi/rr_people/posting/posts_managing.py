@@ -24,11 +24,16 @@ class ImportantYoutubePostSupplier(Process):
 
         self.human_storage = hs or HumanStorage("im po su main")
         self.post_storage = ps or PostsStorage("im po su ph")
-        self.posts_supplier = YoutubeChannelsHandler(self.post_storage)
-
         self.pd = ProcessDirector("im po su")
 
-        log.info("important post supplier started")
+        try:
+            self.posts_supplier = YoutubeChannelsHandler(self.post_storage)
+            log.info("important post supplier started")
+        except:
+            self.posts_supplier = None
+            log.info("important post supplier started but not connected")
+
+
 
     def load_new_posts_for_human(self, human_name, channel_id):
         try:

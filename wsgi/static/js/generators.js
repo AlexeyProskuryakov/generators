@@ -84,3 +84,15 @@ function delete_sub(name){
             }
         });
 }
+
+function start_all(){
+    $.ajax({
+        type:"post",
+        url:"/generators/start_all",
+        success:function(data){
+            if (data.ok == true){
+                        $("#start-all-result").text("Пошла пизда по кочкам...");
+                }
+        }
+    });
+}

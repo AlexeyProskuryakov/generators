@@ -53,31 +53,3 @@ class StatesHandler(object):
             if v is None or ks is None:
                 result[k] = S_STOP
         return result
-
-    def set_human_state(self, human_name, state, ex=3600):
-        pipe = self.redis.pipeline()
-        pipe.hset(HUMAN_STATES, human_name, state)
-        pipe.set(HUMAN_STATE(human_name), state, ex=ex)
-        pipe.execute()
-
-    def get_human_state(self, human_name):
-        state = self.redis.get(HUMAN_STATE(human_name))
-        if not state:
-            return S_STOP
-        return state
-
-    def is_state(self, human_name, state):
-        """
-        Analyse state of human because at some situations state can be WORK_<some another data>
-        :param human_name: name of human
-        :param state: state of human
-        :return: bool
-        """
-        p_state = self.get_human_state(human_name)
-        return state in p_state
-
-    def get_all_humans_states(self):
-        result = self.redis.hgetall(HUMAN_STATES)
-        for k, v in result.iteritems():
-            result[k] = self.get_human_state(k)
-        return result

@@ -3,15 +3,17 @@ import json
 import os
 import re
 from datetime import datetime
+import time
 from uuid import uuid4
 
 from flask import Flask, logging, request, render_template, session, url_for, g, flash
 from flask.json import jsonify
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_login import LoginManager, login_user, login_required, logout_user
+from multiprocessing import Process
 from werkzeug.utils import redirect
 from wsgi.db import HumanStorage
-from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP
+from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP, S_END
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
 from wsgi.rr_people.posting.posts import PS_BAD, PS_READY, PostsStorage, PS_PREPARED
@@ -375,6 +377,27 @@ def prepare_for_posting():
         return jsonify(**{"ok": True})
 
     return jsonify(**{"ok": False, "error": "sub is not exists"})
+
+
+@app.route("/generators/start_all", methods=["POSt"])
+@login_required
+def start_all():
+    def f():
+        subs = db.get_subs_of_all_humans()
+        pg = PostsGenerator()
+        for sub in subs:
+            pg.states_handler.set_posts_generator_state(sub, S_WORK)
+            pg.start_generate_posts(sub)
+            while 1:
+                if posts_generator.states_handler.get_posts_generator_state(sub) == S_END:
+                    break
+                else:
+                    time.sleep(1)
+
+    p = Process(target=f)
+    p.start()
+
+    return jsonify(**{"ok": True})
 
 
 @app.route("/queue/posts/<name>", methods=["GET"])
