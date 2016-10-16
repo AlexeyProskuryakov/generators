@@ -264,8 +264,8 @@ srs = SubredditsRelationsStore("server")
 posts_generator = PostsGenerator()
 process_director = ProcessDirector("server")
 posts_storage = PostsStorage("server", hs=db)
-imposu = ImportantYoutubePostSupplier(hs=db, ps=posts_storage)
-imposu.start()
+# imposu = ImportantYoutubePostSupplier(hs=db, ps=posts_storage)
+# imposu.start()
 
 
 @app.route("/posts")
