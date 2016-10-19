@@ -3,7 +3,7 @@ import random
 
 from imgurpython import ImgurClient
 
-from wsgi import properties
+from wsgi import properties, ConfigManager
 from wsgi.rr_people import RedditHandler, normalize
 from wsgi.rr_people.posting.generator import Generator
 from wsgi.rr_people.posting.posts import PostSource
@@ -21,7 +21,8 @@ def _get_post_id(url):
 class ImgurPostsProvider(RedditHandler, Generator):
     def __init__(self):
         super(ImgurPostsProvider, self).__init__(IMGUR)
-        self.client = ImgurClient(properties.ImgrClientID, properties.ImgrClientSecret)
+        cm = ConfigManager()
+        self.client = ImgurClient(cm.get('ImgrClientID'), cm.get('ImgrClientSecret'))
         self.toggled = set()
 
     def get_copies(self, url):

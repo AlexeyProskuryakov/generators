@@ -33,17 +33,19 @@ class PostSource(object):
                         data.get("for_sub"),
                         data.get("at_time"),
                         data.get("url_hash"),
-                        data.get("important")
+                        data.get("important"),
+                        data.get("video_id")
                         )
         return ps
 
-    def __init__(self, url, title, for_sub=None, at_time=None, url_hash=None, important=False):
+    def __init__(self, url, title, for_sub=None, at_time=None, url_hash=None, important=False, video_id=None):
         self.url = url
         self.title = title
         self.for_sub = for_sub
         self.at_time = at_time
         self.url_hash = url_hash or URL_HASH(url)
         self.important = important
+        self.video_id = video_id
 
     def serialize(self):
         return json.dumps(self.__dict__)
@@ -72,11 +74,13 @@ class PostsStorage(DBHandler):
             self.posts.create_index("important")
             self.posts.create_index("state")
             self.posts.create_index("time")
+            self.posts.create_index("video_id")
             self.posts.create_index("_lock", sparse=True)
         else:
             self.posts = self.db.get_collection("generated_posts")
 
-        self.hs = hs or HumanStorage("ps %s"%name)
+        self.hs = hs or HumanStorage("ps %s" % name)
+
     # posts
     def set_post_state(self, url_hash, state):
         return self.posts.update_one({"url_hash": url_hash}, {"$set": {"state": state}})
@@ -103,7 +107,7 @@ class PostsStorage(DBHandler):
         if found: return True
         return False
 
-    def add_generated_post(self, post, sub, important=False, human=None, state=PS_PREPARED):
+    def add_generated_post(self, post, sub, important=False, human=None, state=PS_READY, video_id=None):
         if isinstance(post, PostSource):
             if not self.check_post_hash_exists(post.url_hash):
                 data = post.to_dict()
@@ -112,6 +116,8 @@ class PostsStorage(DBHandler):
                 data['important'] = important
                 data['human'] = human or random.choice(self.hs.get_humans_of_sub(sub))
                 data['time'] = time.time()
+                if video_id or post.video_id is not None:
+                    data["video_id"] = video_id
                 return self.posts.insert_one(data)
 
     def get_posts_for_sub_with_state(self, sub, state=PS_PREPARED):
@@ -123,6 +129,9 @@ class PostsStorage(DBHandler):
     def remove_posts_of_sub(self, subname):
         result = self.posts.delete_many({"sub": subname})
         return result
+
+    def is_video_id_present(self, video_id):
+        return self.posts.find_one({"video_id": video_id})
 
 
 if __name__ == '__main__':

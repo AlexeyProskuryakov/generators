@@ -6,21 +6,25 @@ from datetime import datetime
 import time
 from uuid import uuid4
 
-from flask import Flask, logging, request, render_template, session, url_for, g, flash
+from flask import Flask, logging, request, render_template, session, url_for, g, flash, abort
 from flask.json import jsonify
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_login import LoginManager, login_user, login_required, logout_user
 from multiprocessing import Process
+
+from states.processes import ProcessDirector
 from werkzeug.utils import redirect
+
 from wsgi.db import HumanStorage
 from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP, S_END
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
-from wsgi.rr_people.posting.posts import PS_BAD, PS_READY, PostsStorage, PS_PREPARED
+from wsgi.rr_people.posting.posts import PS_BAD, PostsStorage, PS_PREPARED
 from wsgi.rr_people.posting.posts_generator import PostsGenerator
-from wsgi.rr_people.posting.posts_managing import ImportantYoutubePostSupplier, NoisePostsAutoAdder
-from wsgi.rr_people.states.processes import ProcessDirector
-from wsgi.wake_up import WakeUp
+
+from wake_up.views import wake_up_app
+
+from wsgi.rr_people.posting.posts_important import IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT, ImportantYoutubePostSupplier
 
 __author__ = '4ikist'
 
@@ -35,6 +39,8 @@ app = Flask("Humans", template_folder=cur_dir + "/templates", static_folder=cur_
 
 app.secret_key = 'foo bar baz'
 app.config['SESSION_TYPE'] = 'filesystem'
+
+app.register_blueprint(wake_up_app, url_prefix="/wake_up")
 
 
 def tst_to_dt(value):
@@ -54,38 +60,6 @@ if os.environ.get("test", False):
     app.debug = True
     app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
     toolbar = DebugToolbarExtension(app)
-
-url = "http://rr-alexeyp.rhcloud.com"
-wu = WakeUp()
-wu.store.add_url(url)
-wu.daemon = True
-wu.start()
-
-
-@app.route("/wake_up/<salt>", methods=["POST"])
-def wake_up(salt):
-    return jsonify(**{"result": salt})
-
-
-@app.route("/wake_up", methods=["GET", "POST"])
-def wake_up_manage():
-    if request.method == "POST":
-        urls = request.form.get("urls")
-        urls = urls.split("\n")
-        for i, url in enumerate(urls):
-            url = url.strip()
-            if url:
-                wu.store.add_url(url)
-                urls[i] = url
-
-        saved_urls = wu.store.get_urls()
-        to_delete = set(saved_urls).difference(urls)
-        for url in to_delete:
-            wu.store.remove_url(url)
-
-    urls = wu.store.get_urls()
-    return render_template("wake_up.html", **{"urls": urls})
-
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -212,10 +186,6 @@ def logout():
 @app.route("/")
 @login_required
 def main():
-    if request.method == "POST":
-        _url = request.form.get("url")
-        wu.what = _url
-
     user = g.user
     return render_template("main.html", **{"username": user.name})
 
@@ -224,48 +194,12 @@ REDIRECT_URI = "http://rr-alexeyp.rhcloud.com/authorize_callback"
 C_ID = None
 C_SECRET = None
 
-
-@app.route("/global_configuration/<name>", methods=["GET", "POST"])
-@login_required
-def global_configuration(name):
-    if request.method == "GET":
-        result = db.get_global_config(name)
-        if result:
-            return jsonify(**{"ok": True, "result": result})
-        return jsonify(**{"ok": False, "error": "no config with name %s" % name})
-    elif request.method == "POST":
-        try:
-            data = json.loads(request.data)
-            result = db.set_global_config(name, data)
-            return jsonify(**{"ok": True, "result": result})
-        except Exception as e:
-            log.warning(e.message)
-            return jsonify(**{"ok": False, "error": e})
-
-
-@app.route("/noise_auto_adder", methods=["POST"])
-@login_required
-def noise_auto_add():
-    data = json.loads(request.data)
-    db.set_global_config(NoisePostsAutoAdder.name, data=data)
-
-    if data.get("on"):
-        npa = NoisePostsAutoAdder()
-        npa.start()
-        return jsonify(**{"ok": True, "started": True, "pid": npa.pid})
-
-    return jsonify(**{"ok": True, "started": False})
-
-
 # generators
 splitter = re.compile('[^\w\d_-]*')
 
 srs = SubredditsRelationsStore("server")
 posts_generator = PostsGenerator()
-process_director = ProcessDirector("server")
 posts_storage = PostsStorage("server", hs=db)
-# imposu = ImportantYoutubePostSupplier(hs=db, ps=posts_storage)
-# imposu.start()
 
 
 @app.route("/posts")
@@ -405,6 +339,23 @@ def start_all():
 def queue_of_posts(name):
     queue = posts_storage.get_ready_posts(name=name)
     return render_template("posts_queue.html", **{"human_name": name, "queue": queue})
+
+
+pd = ProcessDirector("server")
+im_po_su = ImportantYoutubePostSupplier()
+if not pd.is_aspect_work(IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT):
+    im_po_su.start()
+
+
+@app.route("/load_important", methods=["POST"])
+def load_important():
+    data = json.loads(request.data)
+    if "key" in data:
+        count_loaded, e = im_po_su.load_new_posts_for_human(data.get("name"), data.get("channel_id"))
+        if e:
+            return jsonify(**{"ok":False, "error":e})
+        return jsonify(**{"ok": True, "key": data.get("key"), "loaded":count_loaded})
+    return jsonify(**{"ok":False,"fuck off":"вы кто такие я вас не звал идите нахуй"})
 
 
 if __name__ == '__main__':

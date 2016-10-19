@@ -4,49 +4,61 @@ import re
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 
-from wsgi.properties import YOUTUBE_DEVELOPER_KEY, YOUTUBE_API_VERSION, YOUTUBE_API_SERVICE_NAME
-from wsgi.rr_people.posting.posts import PostsStorage, PostSource, URL_HASH
+from wsgi import ConfigManager
+from wsgi.properties import YOUTUBE_API_VERSION, YOUTUBE_TAG_SUB, YOUTUBE_TAG_TITLE
+from wsgi.rr_people.posting.posts import PostsStorage, PostSource, PS_BAD
 
 log = logging.getLogger("youtube")
 
 YOUTUBE_URL = lambda x: "https://www.youtube.com/watch?v=%s" % x
 
-y_url_re = re.compile("((y2u|youtu)\.be\/|youtube\.com\/watch\?v\=)(?P<id>[a-zA-Z0-9-]+)")
+y_url_re = re.compile(
+    "(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})")
 
 
 class YoutubeChannelsHandler(object):
     def __init__(self, ps=None):
-        self.youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
-                             developerKey=YOUTUBE_DEVELOPER_KEY)
+        cm = ConfigManager()
+        self.youtube = build(cm.get('YOUTUBE_API_SERVICE_NAME'),
+                             YOUTUBE_API_VERSION,
+                             developerKey=cm.get('YOUTUBE_DEVELOPER_KEY'))
         self.posts_storage = ps or PostsStorage(name="youtube posts supplier")
 
-    def _get_sub_on_tags(self, tags):
+    def _get_tag_value(self, tags, tag_key):
         for tag in tags:
-            if "sub:" in tag:
-                return tag.replace("sub:", "").strip()
+            if tag_key in tag:
+                return tag.replace(tag_key, "").strip()
 
     def _form_posts_on_videos_info(self, items):
         result = []
         for video_info in items:
             id = video_info.get("id")
             if id:
-                title = video_info.get("snippet", {}).get("title") or video_info.get("snippet", {}).get("description")
-                sub = self._get_sub_on_tags(video_info.get("snippet", {}).get("tags", []))
+                tags = video_info.get("snippet", {}).get("tags", [])
+                title = self._get_tag_value(tags, YOUTUBE_TAG_TITLE)
+                if not title:
+                    log.warn("Video have not pt: tag and title will be real title")
+                    title = video_info.get("snippet", {}).get("title")
+
+                sub = self._get_tag_value(tags, YOUTUBE_TAG_SUB)
                 if not sub:
                     log.warn("Video [%s] (%s) without sub; Skip this video :(" % (id, title))
                     continue
                 url = YOUTUBE_URL(id)
-                ps = PostSource(url=url, title=title, for_sub=sub)
+                ps = PostSource(url=url, title=title, for_sub=sub, video_id=id)
                 result.append(ps)
-                log.info("Generate important post: %s", ps)
+                log.info("Found important post: %s", ps)
             else:
                 log.warn("video: \n%s\nis have not id :( " % video_info)
         return result
 
-    def _get_new_videos_ids(self, video_ids):
+    def _get_not_loaded_ids(self, video_ids):
         result = []
         for v_id in video_ids:
-            if self.posts_storage.get_post_state(URL_HASH(YOUTUBE_URL(v_id))):
+            data = self.posts_storage.is_video_id_present(v_id)
+            if data is not None and data.get("state") == PS_BAD:
+                self.posts_storage.delete_post(data.get("_id"))
+            elif data is not None:
                 continue
             result.append(v_id)
         return result
@@ -62,7 +74,7 @@ class YoutubeChannelsHandler(object):
             video_ids = filter(lambda x: x,
                                map(lambda x: x.get("id", {}).get("videoId"),
                                    search_result.get('items', [])))
-            new_videos_ids = self._get_new_videos_ids(video_ids)
+            new_videos_ids = self._get_not_loaded_ids(video_ids)
             log.info("found %s posts in channel: %s; not saved: %s" % (len(video_ids), channel_id, len(new_videos_ids)))
 
             if new_videos_ids:
@@ -80,6 +92,12 @@ class YoutubeChannelsHandler(object):
 
         return items
 
+    def get_tags_of_video_id(self, video_id):
+        videos_data = self.youtube.videos().list(
+            **{"id": ",".join([video_id]), "part": "snippet"}).execute()
+        prep_videos = self._form_posts_on_videos_info(videos_data.get("items", []))
+        return prep_videos
+
     def get_video_id(self, post_url):
         found = y_url_re.findall(post_url)
         if found:
@@ -96,15 +114,3 @@ class YoutubeChannelsHandler(object):
         for item in video_response.get('items'):
             snippet = item.get("snippet")
             return snippet.get("channelId")
-
-
-if __name__ == '__main__':
-    yps = YoutubeChannelsHandler()
-    # print yps.get_video_id("https://www.youtube.com/watch?v=cQL3JIYg9Io&feature=youtu.be")
-    # channel_id = yps.get_channel_id("https://www.youtube.com/watch?v=cQL3JIYg9Io&feature=youtu.be")
-
-    videos = yps.get_new_channel_videos("UCEMga_5kPDRwFXaJM1NQryA")  # 3030 channel
-    # videos = yps.get_new_channel_videos("UCNBfdM4qeFvyFag-34wnCeQ") #alesha channel
-    # videos = yps.get_new_channel_videos("UCqojywe2RqVPgALVyV0LrWg")
-    channel_id = yps.get_channel_id("https://www.youtube.com/watch?v=LuXBjs7eN4o")
-    print channel_id

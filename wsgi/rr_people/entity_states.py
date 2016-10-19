@@ -3,7 +3,8 @@ import logging
 
 import redis
 
-from wsgi.properties import states_redis_address, states_redis_port, states_redis_password, redis_max_connections
+from wsgi import ConfigManager
+from wsgi.properties import redis_max_connections
 from wsgi.rr_people import S_STOP
 
 HASH_STATES_PG = "pg_states_hashset"
@@ -19,9 +20,10 @@ log = logging.getLogger("states")
 
 class StatesHandler(object):
     def __init__(self, name="?", clear=False, max_connections=redis_max_connections):
-        self.redis = redis.StrictRedis(host=states_redis_address,
-                                       port=states_redis_port,
-                                       password=states_redis_password,
+        cm = ConfigManager()
+        self.redis = redis.StrictRedis(host=cm.get('states_redis_address'),
+                                       port=int(cm.get('states_redis_port')),
+                                       password=cm.get('states_redis_password'),
                                        db=0,
                                        max_connections=max_connections
                                        )

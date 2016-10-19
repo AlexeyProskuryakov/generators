@@ -2,13 +2,11 @@
 import hashlib
 import logging
 import time
-from datetime import datetime
 
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
 from wsgi import ConfigManager
-from wsgi.properties import mongo_uri, db_name
 
 __author__ = 'alesha'
 
@@ -16,7 +14,7 @@ log = logging.getLogger("DB")
 
 
 class DBHandler(object):
-    def __init__(self, name="?", uri=mongo_uri, db_name=db_name):
+    def __init__(self, name="?", uri=None, db_name=None):
         cm = ConfigManager()
         _uri = uri or cm.get("mongo_uri")
         _db_name = db_name or cm.get("db_name")
@@ -73,21 +71,6 @@ class HumanStorage(DBHandler):
         else:
             self.global_config = db.get_collection("global_config")
 
-    def get_global_config(self, name):
-        return self.global_config.find_one({"name": name}, projection={"_id": False})
-
-    def set_global_config(self, name, data):
-        if isinstance(data, dict):
-            doc = dict({"name": name}, **data)
-        else:
-            doc = {"name": name, "data": data}
-
-        found = self.global_config.find_one({"name": name})
-        if found:
-            return self.global_config.update_one({"name": name}, {"$set": doc})
-
-        return self.global_config.insert_one(doc)
-
     def update_human_access_credentials_info(self, user, info):
         if isinstance(info.get("scope"), set):
             info['scope'] = list(info['scope'])
@@ -126,7 +109,7 @@ class HumanStorage(DBHandler):
 
     def get_humans_of_sub(self, sub):
         humans = []
-        for el in self.human_config.find({"subs":sub}, projection={"user":1}):
+        for el in self.human_config.find({"subs": sub}, projection={"user": 1}):
             humans.append(el.get("user"))
         return humans
 

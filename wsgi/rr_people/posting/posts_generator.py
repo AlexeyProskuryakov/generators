@@ -5,9 +5,9 @@ from multiprocessing import Process
 
 from wsgi.db import DBHandler
 from wsgi.rr_people import S_WORK, S_SUSPEND, S_END
+from wsgi.rr_people.entity_states import StatesHandler
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.posts import PostsStorage
-from wsgi.rr_people.states.entity_states import StatesHandler
 
 log = logging.getLogger("post_generator")
 
@@ -83,9 +83,9 @@ class PostsGenerator(object):
         def set_state(state, ex=None):
             if self.states_handler.get_posts_generator_state(subrreddit) == S_SUSPEND:
                 return False
-            else:
-                self.states_handler.set_posts_generator_state(subrreddit, state, ex=ex)
-                return True
+
+            self.states_handler.set_posts_generator_state(subrreddit, state, ex=ex)
+            return True
 
         def f():
             try:
