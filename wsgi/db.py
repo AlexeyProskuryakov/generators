@@ -7,6 +7,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 
+from wsgi import ConfigManager
 from wsgi.properties import mongo_uri, db_name
 
 __author__ = 'alesha'
@@ -16,9 +17,15 @@ log = logging.getLogger("DB")
 
 class DBHandler(object):
     def __init__(self, name="?", uri=mongo_uri, db_name=db_name):
-        log.info("start db handler for [%s] %s" % (name, uri))
-        self.client = MongoClient(host=uri, maxPoolSize=10, connect=False)
-        self.db = self.client[db_name]
+        cm = ConfigManager()
+        _uri = uri or cm.get("mongo_uri")
+        _db_name = db_name or cm.get("db_name")
+
+        self.client = MongoClient(host=_uri, maxPoolSize=10, connect=False)
+        self.db = self.client[_db_name]
+        self.collection_names = self.db.collection_names(include_system_collections=False)
+
+        log.info("start db handler for [%s] [%s/%s]" % (name, _uri, _db_name))
 
 
 class HumanStorage(DBHandler):
