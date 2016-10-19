@@ -37,7 +37,7 @@ class YoutubeChannelsHandler(object):
                 tags = video_info.get("snippet", {}).get("tags", [])
                 title = self._get_tag_value(tags, YOUTUBE_TAG_TITLE)
                 if not title:
-                    log.warn("Video have not pt: tag and title will be real title")
+                    log.warn("Video [%s] have not pt: tag and title will be real title")
                     title = video_info.get("snippet", {}).get("title")
 
                 sub = self._get_tag_value(tags, YOUTUBE_TAG_SUB)
