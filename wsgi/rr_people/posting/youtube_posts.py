@@ -5,7 +5,7 @@ from apiclient.discovery import build
 from apiclient.errors import HttpError
 
 from rr_lib.cm import ConfigManager
-from wsgi.properties import YOUTUBE_API_VERSION, YOUTUBE_TAG_SUB, YOUTUBE_TAG_TITLE
+from wsgi.properties import YOUTUBE_API_VERSION, YOUTUBE_TAG_SUB, YOUTUBE_TAG_TITLE, YOUTUBE_TAG_URL_TIME
 from wsgi.rr_people.posting.posts import PostsStorage, PostSource, PS_BAD
 
 log = logging.getLogger("youtube")
@@ -39,12 +39,15 @@ class YoutubeChannelsHandler(object):
                 if not title:
                     log.warn("Video [%s] have not pt: tag and title will be real title"%id)
                     title = video_info.get("snippet", {}).get("title")
-
                 sub = self._get_tag_value(tags, YOUTUBE_TAG_SUB)
                 if not sub:
                     log.warn("Video [%s] (%s) without sub; Skip this video :(" % (id, title))
                     continue
                 url = YOUTUBE_URL(id)
+                url_time =  self._get_tag_value(tags, YOUTUBE_TAG_URL_TIME)
+                if url_time:
+                    url = "%s#t=%s"%(url, url_time)
+
                 ps = PostSource(url=url, title=title, for_sub=sub, video_id=id)
                 result.append(ps)
                 log.info("Found important post: %s", ps)

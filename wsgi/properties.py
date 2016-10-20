@@ -47,6 +47,7 @@ YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 YOUTUBE_TAG_SUB = "sub:"
 YOUTUBE_TAG_TITLE = "pt:"
+YOUTUBE_TAG_URL_TIME = "ut:"
 
 force_post_manager_sleep_iteration_time = 5 * MINUTE  # время через которое он будет сканировать ютуб
 
