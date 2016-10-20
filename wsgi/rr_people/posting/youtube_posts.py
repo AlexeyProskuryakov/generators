@@ -4,7 +4,7 @@ import re
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 
-from wsgi import ConfigManager
+from rr_lib.cm import ConfigManager
 from wsgi.properties import YOUTUBE_API_VERSION, YOUTUBE_TAG_SUB, YOUTUBE_TAG_TITLE
 from wsgi.rr_people.posting.posts import PostsStorage, PostSource, PS_BAD
 
@@ -37,7 +37,7 @@ class YoutubeChannelsHandler(object):
                 tags = video_info.get("snippet", {}).get("tags", [])
                 title = self._get_tag_value(tags, YOUTUBE_TAG_TITLE)
                 if not title:
-                    log.warn("Video [%s] have not pt: tag and title will be real title")
+                    log.warn("Video [%s] have not pt: tag and title will be real title"%id)
                     title = video_info.get("snippet", {}).get("title")
 
                 sub = self._get_tag_value(tags, YOUTUBE_TAG_SUB)

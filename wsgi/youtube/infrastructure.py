@@ -1,7 +1,7 @@
 import redis
 from multiprocessing import Process
 
-from wsgi import ConfigManager
+from rr_lib.cm import ConfigManager
 from wsgi.youtube.store import YMStorage
 
 to_engie = "TO_ENGINE"

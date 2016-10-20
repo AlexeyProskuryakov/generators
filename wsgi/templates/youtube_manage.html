@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+{% block body %}
+
+{% block content %}
+
+
+<div class="content">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <form action="{{url_for('youtube_manage')}}" method="post" class="form-horizontal">
+
+
+                            <div class="form-group form-inline">
+                                <label for="keywords">ЗАПРОС по которому исчутся и каналы и видюшки: </label>
+                                <input type="number" class="form-control" id="keywords">
+                            </div>
+
+
+
+                        <div class="col-md-10">
+                            <div class="form-group form-inline">
+                                <label for="m_keywords">СЛОВА наличие которых выкидывает из выборки:</label>
+                                <textarea class="form-control" rows="5" id="m_keywords"></textarea>
+                            </div>
+                        </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group form-inline">
+                                <div class="row"><h3>Channels filter</h3></div>
+                                <label for="ch_commentCount_f">Comments min: </label>
+                                <input type="number" class="form-control" id="ch_commentCount_f">
+                                <label for="ch_commentCount_t">max:</label>
+                                <input type="number" class="form-control" id="ch_commentCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="ch_subscriberCount_f">Subscribers min: </label>
+                                <input type="number" class="form-control" id="ch_subscriberCount_f">
+                                <label for="ch_subscriberCount_t">max:</label>
+                                <input type="number" class="form-control" id="ch_subscriberCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="videoCount_f">Videos count min: </label>
+                                <input type="number" class="form-control" id="videoCount_f">
+                                <label for="videoCount_f">max:</label>
+                                <input type="number" class="form-control" id="videoCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="ch_viewCount_f">Views count min: </label>
+                                <input type="number" class="form-control" id="ch_viewCount_f">
+                                <label for="ch_viewCount_t">max:</label>
+                                <input type="number" class="form-control" id="ch_viewCount_t">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="row"><h3>Videos filter</h3></div>
+                            <div class="form-group form-inline">
+                                <label for="vid_commentCount_f">Comments min: </label>
+                                <input type="number" class="form-control" id="vid_commentCount_f">
+                                <label for="vid_commentCount_t">max:</label>
+                                <input type="number" class="form-control" id="vid_commentCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="likeCount_f">Likes min: </label>
+                                <input type="number" class="form-control" id="likeCount_f">
+                                <label for="likeCount_t">max:</label>
+                                <input type="number" class="form-control" id="likeCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="dislikeCount_f">DisLikes min: </label>
+                                <input type="number" class="form-control" id="dislikeCount_f">
+                                <label for="dislikeCount_t">max:</label>
+                                <input type="number" class="form-control" id="dislikeCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="favoriteCount_f">Favorites min: </label>
+                                <input type="number" class="form-control" id="favoriteCount_f">
+                                <label for="favoriteCount_t">max:</label>
+                                <input type="number" class="form-control" id="favoriteCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="vid_viewCount_f">Views count min: </label>
+                                <input type="number" class="form-control" id="vid_viewCount_f">
+                                <label for="vid_viewCount_t">max:</label>
+                                <input type="number" class="form-control" id="vid_viewCount_t">
+                            </div>
+                            <div class="form-group form-inline">
+                                <label for="time_to_see" data-toggle="tooltip"
+                                       title="если видюшка размещена в промежутке от (сейчас - сие значение) до сейчас">
+                                    До
+                                    какого времени (секунды): </label>
+                                <input type="number" class="form-control" id="time_to_see">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% endblock %}

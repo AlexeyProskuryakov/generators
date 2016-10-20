@@ -1,150 +1,57 @@
 # coding=utf-8
 import json
+from multiprocessing import Process
 import os
 import re
-from datetime import datetime
 import time
-from uuid import uuid4
+import sys
 
-from flask import Flask, logging, request, render_template, session, url_for, g, flash, abort
+from flask import Flask, logging, request, render_template, session, url_for, g, flash
 from flask.json import jsonify
-from flask_debugtoolbar import DebugToolbarExtension
-from flask_login import LoginManager, login_user, login_required, logout_user
-from multiprocessing import Process
-
-from states.processes import ProcessDirector
+from flask_login import LoginManager, login_required
 from werkzeug.utils import redirect
 
+from wsgi import tst_to_dt, array_to_string
 from wsgi.db import HumanStorage
 from wsgi.rr_people import S_WORK, S_SUSPEND, S_STOP, S_END
 from wsgi.rr_people.posting import POST_GENERATOR_OBJECTS
 from wsgi.rr_people.posting.copy_gen import SubredditsRelationsStore
 from wsgi.rr_people.posting.posts import PS_BAD, PostsStorage, PS_PREPARED
 from wsgi.rr_people.posting.posts_generator import PostsGenerator
-
-from wake_up.views import wake_up_app
-
 from wsgi.rr_people.posting.posts_important import IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT, ImportantYoutubePostSupplier
 
-__author__ = '4ikist'
+from wake_up.views import wake_up_app
+from rr_lib.users.views import users_app, usersHandler
+from states.processes import ProcessDirector
 
-import sys
+
+__author__ = '4ikist'
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-log = logging.getLogger("web")
 cur_dir = os.path.dirname(__file__)
+
 app = Flask("Humans", template_folder=cur_dir + "/templates", static_folder=cur_dir + "/static")
 
 app.secret_key = 'foo bar baz'
 app.config['SESSION_TYPE'] = 'filesystem'
 
 app.register_blueprint(wake_up_app, url_prefix="/wake_up")
-
-
-def tst_to_dt(value):
-    return datetime.fromtimestamp(value).strftime("%H:%M %d.%m.%Y")
-
-
-def array_to_string(array):
-    return " ".join([str(el) for el in array])
-
+app.register_blueprint(users_app, url_prefix="/u")
 
 app.jinja_env.filters["tst_to_dt"] = tst_to_dt
 app.jinja_env.globals.update(array_to_string=array_to_string)
 
-if os.environ.get("test", False):
-    log.info("will run at test mode")
-    app.config["SECRET_KEY"] = "foo bar baz"
-    app.debug = True
-    app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
-    toolbar = DebugToolbarExtension(app)
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-
-db = HumanStorage(name="hs server")
-
-
-class User(object):
-    def __init__(self, name, pwd):
-        self.id = str(uuid4().get_hex())
-        self.auth = False
-        self.active = False
-        self.anonymous = False
-        self.name = name
-        self.pwd = pwd
-
-    def is_authenticated(self):
-        return self.auth
-
-    def is_active(self):
-        return True
-
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return self.id
-
-
-class UsersHandler(object):
-    def __init__(self):
-        self.users = {}
-        self.auth_users = {}
-
-    def get_guest(self):
-        user = User("Guest", "")
-        user.anonymous = True
-        self.users[user.id] = user
-        return user
-
-    def get_by_id(self, id):
-        found = self.users.get(id)
-        if not found:
-            found = db.users.find_one({"user_id": id})
-            if found:
-                user = User(found.get('name'), found.get("pwd"))
-                user.id = found.get("user_id")
-                self.users[user.id] = user
-                found = user
-        return found
-
-    def auth_user(self, name, pwd):
-        authed = db.check_user(name, pwd)
-        if authed:
-            user = self.get_by_id(authed)
-            if not user:
-                user = User(name, pwd)
-                user.id = authed
-            user.auth = True
-            user.active = True
-            self.users[user.id] = user
-            return user
-
-    def logout(self, user):
-        user.auth = False
-        user.active = False
-        self.users[user.id] = user
-
-    def add_user(self, user):
-        self.users[user.id] = user
-        db.add_user(user.name, user.pwd, user.id)
-
-
-usersHandler = UsersHandler()
-log.info("users handler was initted")
-usersHandler.add_user(User("3030", "89231950908zozo"))
-
 
 @app.before_request
 def load_user():
     if session.get("user_id"):
         user = usersHandler.get_by_id(session.get("user_id"))
     else:
-        # user = None
         user = usersHandler.get_guest()
     g.user = user
 
@@ -156,31 +63,7 @@ def load_user(userid):
 
 @login_manager.unauthorized_handler
 def unauthorized_callback():
-    return redirect(url_for('login'))
-
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        login = request.form.get("name")
-        password = request.form.get("password")
-        remember_me = request.form.get("remember") == u"on"
-        user = usersHandler.auth_user(login, password)
-        if user:
-            try:
-                login_user(user, remember=remember_me)
-                return redirect(url_for("main"))
-            except Exception as e:
-                log.exception(e)
-
-    return render_template("login.html")
-
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
+    return redirect(url_for('users_api.login'))
 
 
 @app.route("/")
@@ -189,17 +72,19 @@ def main():
     user = g.user
     return render_template("main.html", **{"username": user.name})
 
+log = logging.getLogger("web")
+
+db = HumanStorage(name="hs server")
 
 REDIRECT_URI = "http://rr-alexeyp.rhcloud.com/authorize_callback"
 C_ID = None
 C_SECRET = None
 
-# generators
 splitter = re.compile('[^\w\d_-]*')
 
 srs = SubredditsRelationsStore("server")
-posts_generator = PostsGenerator()
 posts_storage = PostsStorage("server", hs=db)
+posts_generator = PostsGenerator()
 
 
 @app.route("/posts")
@@ -353,10 +238,15 @@ def load_important():
     if "key" in data:
         count_loaded, e = im_po_su.load_new_posts_for_human(data.get("name"), data.get("channel_id"))
         if e:
-            return jsonify(**{"ok":False, "error":e})
-        return jsonify(**{"ok": True, "key": data.get("key"), "loaded":count_loaded})
-    return jsonify(**{"ok":False,"fuck off":"вы кто такие я вас не звал идите нахуй"})
+            return jsonify(**{"ok": False, "error": e})
+        return jsonify(**{"ok": True, "key": data.get("key"), "loaded": count_loaded})
+    return jsonify(**{"ok": False, "fuck off": "вы кто такие я вас не звал идите нахуй"})
 
+
+@app.route("/youtube", methods=["POST", "GET"])
+@login_required
+def youtube_manage():
+    return render_template("youtube_manage.html")
 
 if __name__ == '__main__':
     print os.path.dirname(__file__)

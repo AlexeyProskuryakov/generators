@@ -23,10 +23,11 @@
 <div class=page>
     <ul class="nav nav-pills">
         {% if session.user_id %}
-        <li role="presentation"><a href="{{ url_for('logout') }}">Log out</a></li>
+        <li role="presentation"><a href="{{ url_for('users_api.logout') }}">Log out</a></li>
         <li role="presentation"><a href="{{ url_for('wake_up_api.wake_up_manage') }}">WakeUp management</a></li>
         <li role="presentation"><a href="{{ url_for('posts') }}">Posts</a></li>
         <li role="presentation"><a href="{{ url_for('gens_manage') }}">Generators</a></li>
+        <li role="presentation"><a href="{{ url_for('youtube_manage')}}"><img src="{{url_for('static', filename='img/truba.jpg')}}" width="45" height="30"></a> </li>
         {% endif %}
     </ul>
     <div class="container">

@@ -9,7 +9,7 @@ from apiclient.errors import HttpError
 from stop_words import get_stop_words
 from stemming.porter2 import stem
 
-from wsgi import ConfigManager
+from rr_lib.cm import ConfigManager
 from wsgi.db import DBHandler
 from wsgi.properties import YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION
 from wsgi.youtube.store import YMStorage
@@ -285,7 +285,7 @@ if __name__ == '__main__':
         't_t': 1000.,
     }
 
-    exp_id, filter_data = ym.new_experiment("funny|porno", [], c_filter, v_filter, DEFAULT_TIME_TO_SEE, agg_filter)
+
     for channel_id, info in ym.get_ids_of_channels(filter_data):
         videos = ym.get_channel_videos(channel_id, filter_data.get("v_filter"), DEFAULT_TIME_TO_SEE)
         tags, words = aggregate_videos_datas(videos)

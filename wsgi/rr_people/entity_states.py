@@ -3,7 +3,7 @@ import logging
 
 import redis
 
-from wsgi import ConfigManager
+from rr_lib.cm import ConfigManager
 from wsgi.properties import redis_max_connections
 from wsgi.rr_people import S_STOP
 

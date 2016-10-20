@@ -3,7 +3,6 @@ import random
 
 from imgurpython import ImgurClient
 
-from wsgi import properties, ConfigManager
 from wsgi.rr_people import RedditHandler, normalize
 from wsgi.rr_people.posting.generator import Generator
 from wsgi.rr_people.posting.posts import PostSource

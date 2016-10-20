@@ -32,7 +32,7 @@ class ImportantYoutubePostSupplier(Process):
 
         self.pd = ProcessDirector("im po su")
 
-        log.info("important post supplier started")
+        log.info("important post supplier inited")
 
     def load_new_posts_for_human(self, human_name, channel_id):
         try:
@@ -53,11 +53,12 @@ class ImportantYoutubePostSupplier(Process):
 
         except Exception as e:
             log.error("Exception at im po su: %s; for %s at %s" % (e.message, human_name, channel_id))
-            return e.message, e
+            log.exception(e)
 
     def run(self):
         tracker = self.pd.start_aspect(IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT,
-                                       tick_time=force_post_manager_sleep_iteration_time / 5)
+                                       tick_time=force_post_manager_sleep_iteration_time / 5,
+                                       with_tracking=False)
         if not tracker:
             log.info("Another im po su is worked")
             return

@@ -51,3 +51,4 @@ ENV/
 .spyderproject
 .ropeproject
 .idea
+src

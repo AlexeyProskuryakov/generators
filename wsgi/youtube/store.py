@@ -1,6 +1,6 @@
 import time
 
-from wsgi import ConfigManager
+from rr_lib.cm import ConfigManager
 from wsgi.db import DBHandler
 
 CHANNEL_ADDLED_TIME = 60 * 60
