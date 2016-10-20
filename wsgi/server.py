@@ -229,7 +229,7 @@ def queue_of_posts(name):
 
 pd = ProcessDirector("server")
 im_po_su = ImportantYoutubePostSupplier()
-if not pd.is_aspect_work(IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT):
+if not pd.is_aspect_work(IMPORTANT_POSTS_SUPPLIER_PROCESS_ASPECT, timing_check=False):
     im_po_su.start()
 
 
@@ -256,6 +256,6 @@ if __name__ == '__main__':
     while 1:
         print port
         try:
-            app.run(port=65010)
+            app.run(port=port)
         except:
             port += 1
