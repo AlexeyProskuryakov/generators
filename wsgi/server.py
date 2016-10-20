@@ -24,7 +24,6 @@ from wake_up.views import wake_up_app
 from rr_lib.users.views import users_app, usersHandler
 from states.processes import ProcessDirector
 
-
 __author__ = '4ikist'
 
 reload(sys)
@@ -46,6 +45,7 @@ app.jinja_env.globals.update(array_to_string=array_to_string)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
 
 @app.before_request
 def load_user():
@@ -71,6 +71,7 @@ def unauthorized_callback():
 def main():
     user = g.user
     return render_template("main.html", **{"username": user.name})
+
 
 log = logging.getLogger("web")
 
@@ -248,6 +249,13 @@ def load_important():
 def youtube_manage():
     return render_template("youtube_manage.html")
 
+
 if __name__ == '__main__':
-    print os.path.dirname(__file__)
-    app.run(port=65010)
+
+    port = 65010
+    while 1:
+        print port
+        try:
+            app.run(port=65010)
+        except:
+            port += 1
